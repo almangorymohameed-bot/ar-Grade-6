@@ -1,5 +1,5 @@
 import React from 'react';
-import { Award, BookOpen, Star, Sparkles, CheckCircle2, ChevronRight, Trophy, Shield, HelpCircle, Send, AlertCircle, Calendar } from 'lucide-react';
+import { Award, BookOpen, Star, Sparkles, CheckCircle2, ChevronRight, Trophy, Shield, HelpCircle, Send, AlertCircle, Calendar, ChevronDown, ChevronUp } from 'lucide-react';
 import { curriculumData } from '../data/curriculum';
 
 // Helper to normalize Arabic characters for robust search matching
@@ -108,6 +108,7 @@ export default function Dashboard({ completedLessons, quizScores, recentScores, 
   const [challengeSuccess, setChallengeSuccess] = React.useState(false);
   const [pointsEarned, setPointsEarned] = React.useState(0);
   const [showHint, setShowHint] = React.useState(false);
+  const [isChallengeExpanded, setIsChallengeExpanded] = React.useState(false);
 
   React.useEffect(() => {
     const savedDate = localStorage.getItem('ar_challenge_date');
@@ -272,13 +273,19 @@ export default function Dashboard({ completedLessons, quizScores, recentScores, 
       </div>
 
       {/* Daily Parsing Challenge Card ("تحدي الإعراب اليومي") */}
-      <div className="bg-white border-2 border-amber-200/60 rounded-3xl p-6 sm:p-8 space-y-6 shadow-sm relative overflow-hidden">
+      <div className="bg-white border-2 border-amber-200/60 rounded-3xl p-6 sm:p-8 space-y-6 shadow-sm relative overflow-hidden transition-all duration-300">
         {/* Background ambient light */}
         <div className="absolute left-0 top-0 h-32 w-32 bg-amber-500/5 rounded-full blur-2xl pointer-events-none" />
         
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-3 sm:space-y-0 border-b border-natural-border pb-4">
+        <div 
+          onClick={() => setIsChallengeExpanded(!isChallengeExpanded)}
+          className={`flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-3 sm:space-y-0 cursor-pointer select-none group transition-all ${
+            isChallengeExpanded ? 'border-b border-natural-border pb-4' : ''
+          }`}
+          title="اضغط لعرض أو إخفاء تحدي الإعراب"
+        >
           <div className="flex items-center space-x-3 space-x-reverse">
-            <div className="bg-amber-100 p-2.5 rounded-2xl border border-amber-200 text-amber-600 animate-bounce">
+            <div className="bg-amber-100 p-2.5 rounded-2xl border border-amber-200 text-amber-600 group-hover:scale-105 transition-all">
               <Trophy className="h-6 w-6" />
             </div>
             <div>
@@ -286,119 +293,141 @@ export default function Dashboard({ completedLessons, quizScores, recentScores, 
                 تحدي الإعراب اليومي
                 <span className="mr-2 text-[10px] bg-red-100 text-red-700 border border-red-200 px-2.5 py-0.5 rounded-full font-bold">نشط اليوم</span>
               </h3>
-              <p className="text-natural-muted text-xs mt-1 font-medium">أعرب الكلمة المحددة باللون البرتقالي لتكسب نقاط التميز اليومية!</p>
+              <p className="text-natural-muted text-xs mt-1 font-medium">
+                {isChallengeExpanded 
+                  ? 'أعرب الكلمة المحددة باللون البرتقالي لتكسب نقاط التميز اليومية!' 
+                  : 'اضغط هنا لفتح التحدي وإعراب جملة اليوم لكسب +50 نقطة تميّز! 🌟'
+                }
+              </p>
             </div>
           </div>
           
-          <div className="flex items-center space-x-2 space-x-reverse bg-amber-50 border border-amber-200/80 px-3 py-1.5 rounded-xl self-start sm:self-center">
-            <Calendar className="h-4 w-4 text-amber-600" />
-            <span className="text-xs text-amber-800 font-bold font-mono">
-              تحدي {new Date().toLocaleDateString('ar-SD', { weekday: 'long', month: 'long', day: 'numeric' })}
-            </span>
-          </div>
-        </div>
-
-        {/* Challenge Sentence Panel */}
-        <div className="bg-amber-50/30 border border-amber-100/80 p-5 rounded-2xl space-y-3 text-right">
-          <span className="text-[10px] text-amber-700 bg-amber-100/50 px-2.5 py-0.5 rounded-full font-bold">الجملة المقترحة</span>
-          <div className="py-2">
-            {renderSentenceWithHighlight(challenge.sentence, challenge.word)}
-          </div>
-        </div>
-
-        {/* Input and Action Bar */}
-        {!challengeSubmitted ? (
-          <div className="space-y-4">
-            <div className="flex flex-col sm:flex-row gap-3">
-              <input
-                id="input-challenge-ans"
-                type="text"
-                value={challengeAns}
-                onChange={(e) => setChallengeAns(e.target.value)}
-                placeholder={`أعرب كلمة "${challenge.word}" هنا... (مثال: فاعل مرفوع بالضمة الظاهرة)`}
-                className="flex-1 bg-natural-light border-2 border-natural-border rounded-xl px-4 py-3.5 text-xs text-natural-dark font-semibold focus:outline-none focus:border-amber-400 transition-all text-right"
-                dir="rtl"
-              />
-              <button
-                id="btn-challenge-submit"
-                onClick={handleSubmitChallenge}
-                disabled={!challengeAns.trim()}
-                className="px-6 py-3.5 bg-amber-500 hover:bg-amber-600 text-white rounded-xl text-xs font-bold transition-all disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center space-x-2 space-x-reverse shrink-0 shadow-sm"
-              >
-                <Send className="h-4 w-4 ml-2" />
-                <span>إرسال الإجابة للتقييم</span>
-              </button>
+          <div className="flex items-center space-x-2 space-x-reverse self-start sm:self-center">
+            <div className="flex items-center space-x-2 space-x-reverse bg-amber-50 border border-amber-200/80 px-3 py-1.5 rounded-xl">
+              <Calendar className="h-4 w-4 text-amber-600" />
+              <span className="text-xs text-amber-800 font-bold font-mono">
+                تحدي {new Date().toLocaleDateString('ar-SD', { weekday: 'long', month: 'long', day: 'numeric' })}
+              </span>
             </div>
-
-            {/* Hint toggler */}
-            <div>
-              <button
-                onClick={() => setShowHint(!showHint)}
-                className="text-xs text-natural-accent hover:text-natural-accent-hover font-bold flex items-center"
-              >
-                <HelpCircle className="h-4 w-4 ml-1.5 text-natural-accent/80" />
-                {showHint ? 'إخفاء تلميح المساعدة النحوية' : 'طلب تلميح نحوي للمساعدة 💡'}
-              </button>
-              
-              {showHint && (
-                <div className="mt-2.5 bg-natural-light border border-natural-border/70 p-4 rounded-xl text-xs text-natural-dark leading-relaxed font-medium">
-                  💡 <strong>تلميح المعلم:</strong> {challenge.hint}
-                </div>
+            <div className={`mr-2 p-2 rounded-xl border transition-all ${
+              isChallengeExpanded 
+                ? 'bg-amber-100 border-amber-200 text-amber-700' 
+                : 'bg-natural-light border-natural-border text-natural-muted group-hover:bg-amber-50 group-hover:border-amber-200 group-hover:text-amber-600'
+            }`}>
+              {isChallengeExpanded ? (
+                <ChevronUp className="h-4 w-4" />
+              ) : (
+                <ChevronDown className="h-4 w-4 animate-bounce" />
               )}
             </div>
           </div>
-        ) : (
-          /* Submitted State */
-          <div className="space-y-4">
-            {challengeSuccess ? (
-              <div className="bg-emerald-50 border border-emerald-200 p-4 rounded-2xl flex items-start space-x-3 space-x-reverse">
-                <div className="bg-emerald-100 p-2 rounded-xl text-emerald-600 shrink-0">
-                  <CheckCircle2 className="h-5 w-5" />
+        </div>
+
+        {isChallengeExpanded && (
+          <div className="space-y-6 animate-fadeIn transition-all duration-300">
+            {/* Challenge Sentence Panel */}
+            <div className="bg-amber-50/30 border border-amber-100/80 p-5 rounded-2xl space-y-3 text-right">
+              <span className="text-[10px] text-amber-700 bg-amber-100/50 px-2.5 py-0.5 rounded-full font-bold">الجملة المقترحة</span>
+              <div className="py-2">
+                {renderSentenceWithHighlight(challenge.sentence, challenge.word)}
+              </div>
+            </div>
+
+            {/* Input and Action Bar */}
+            {!challengeSubmitted ? (
+              <div className="space-y-4">
+                <div className="flex flex-col sm:flex-row gap-3">
+                  <input
+                    id="input-challenge-ans"
+                    type="text"
+                    value={challengeAns}
+                    onChange={(e) => setChallengeAns(e.target.value)}
+                    placeholder={`أعرب كلمة "${challenge.word}" هنا... (مثال: فاعل مرفوع بالضمة الظاهرة)`}
+                    className="flex-1 bg-natural-light border-2 border-natural-border rounded-xl px-4 py-3.5 text-xs text-natural-dark font-semibold focus:outline-none focus:border-amber-400 transition-all text-right"
+                    dir="rtl"
+                  />
+                  <button
+                    id="btn-challenge-submit"
+                    onClick={handleSubmitChallenge}
+                    disabled={!challengeAns.trim()}
+                    className="px-6 py-3.5 bg-amber-500 hover:bg-amber-600 text-white rounded-xl text-xs font-bold transition-all disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center space-x-2 space-x-reverse shrink-0 shadow-sm"
+                  >
+                    <Send className="h-4 w-4 ml-2" />
+                    <span>إرسال الإجابة للتقييم</span>
+                  </button>
                 </div>
-                <div className="mr-3">
-                  <h4 className="font-bold text-emerald-800 text-xs">إجابة نموذجية ومكتملة! 🎉</h4>
-                  <p className="text-emerald-700 text-xs mt-1 font-medium leading-relaxed">
-                    عمل مدهش يا بطل! لقد وافقت قواعد الإعراب بشكل دقيق. تم إضافة <strong className="font-mono font-bold text-sm bg-emerald-100 px-1.5 py-0.5 rounded text-emerald-800">+{pointsEarned}</strong> نقطة إلى رصيدك!
-                  </p>
+
+                {/* Hint toggler */}
+                <div>
+                  <button
+                    onClick={() => setShowHint(!showHint)}
+                    className="text-xs text-natural-accent hover:text-natural-accent-hover font-bold flex items-center"
+                  >
+                    <HelpCircle className="h-4 w-4 ml-1.5 text-natural-accent/80" />
+                    {showHint ? 'إخفاء تلميح المساعدة النحوية' : 'طلب تلميح نحوي للمساعدة 💡'}
+                  </button>
+                  
+                  {showHint && (
+                    <div className="mt-2.5 bg-natural-light border border-natural-border/70 p-4 rounded-xl text-xs text-natural-dark leading-relaxed font-medium">
+                      💡 <strong>تلميح المعلم:</strong> {challenge.hint}
+                    </div>
+                  )}
                 </div>
               </div>
             ) : (
-              <div className="bg-amber-50 border border-amber-200 p-4 rounded-2xl flex items-start space-x-3 space-x-reverse">
-                <div className="bg-amber-100 p-2 rounded-xl text-amber-600 shrink-0">
-                  <Sparkles className="h-5 w-5 text-amber-500 fill-amber-300" />
+              /* Submitted State */
+              <div className="space-y-4">
+                {challengeSuccess ? (
+                  <div className="bg-emerald-50 border border-emerald-200 p-4 rounded-2xl flex items-start space-x-3 space-x-reverse">
+                    <div className="bg-emerald-100 p-2 rounded-xl text-emerald-600 shrink-0">
+                      <CheckCircle2 className="h-5 w-5" />
+                    </div>
+                    <div className="mr-3">
+                      <h4 className="font-bold text-emerald-800 text-xs">إجابة نموذجية ومكتملة! 🎉</h4>
+                      <p className="text-emerald-700 text-xs mt-1 font-medium leading-relaxed">
+                        عمل مدهش يا بطل! لقد وافقت قواعد الإعراب بشكل دقيق. تم إضافة <strong className="font-mono font-bold text-sm bg-emerald-100 px-1.5 py-0.5 rounded text-emerald-800">+{pointsEarned}</strong> نقطة إلى رصيدك!
+                      </p>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="bg-amber-50 border border-amber-200 p-4 rounded-2xl flex items-start space-x-3 space-x-reverse">
+                    <div className="bg-amber-100 p-2 rounded-xl text-amber-600 shrink-0">
+                      <Sparkles className="h-5 w-5 text-amber-500 fill-amber-300" />
+                    </div>
+                    <div className="mr-3">
+                      <h4 className="font-bold text-amber-800 text-xs">محاولة رائعة ومشكورة! 🌟</h4>
+                      <p className="text-amber-700 text-xs mt-1 font-medium leading-relaxed">
+                        شكراً على محاولتك ومثابرتك! الإعراب مهارة تحتاج للتدريب المستمر. لقد حصلت على <strong className="font-mono font-bold text-sm bg-amber-100 px-1.5 py-0.5 rounded text-amber-800">+{pointsEarned}</strong> نقطة لمشاركتك الجادة!
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                {/* Detailed Explanations */}
+                <div className="bg-natural-light/60 border border-natural-border/80 p-5 rounded-2xl space-y-3">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 divide-y md:divide-y-0 md:divide-x md:divide-x-reverse divide-natural-border/50">
+                    <div className="pb-3 md:pb-0">
+                      <span className="text-[10px] text-natural-muted font-bold block mb-1">إجابتك المكتوبة:</span>
+                      <span className="text-xs text-natural-dark font-bold font-mono bg-white border px-3 py-1.5 rounded-lg inline-block">
+                        {challengeAns}
+                      </span>
+                    </div>
+                    <div className="pt-3 md:pt-0 md:pr-4">
+                      <span className="text-[10px] text-amber-800 font-bold block mb-1">الإعراب النموذجي المعتمد:</span>
+                      <span className="text-xs text-emerald-800 font-bold font-serif">
+                        {challenge.ideal}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="pt-3 border-t border-natural-border/40 text-xs leading-relaxed text-natural-text font-medium">
+                    <strong>📝 شرح وتوجيه المعلم الذكي:</strong> {challenge.explanation}
+                  </div>
                 </div>
-                <div className="mr-3">
-                  <h4 className="font-bold text-amber-800 text-xs">محاولة رائعة ومشكورة! 🌟</h4>
-                  <p className="text-amber-700 text-xs mt-1 font-medium leading-relaxed">
-                    شكراً على محاولتك ومثابرتك! الإعراب مهارة تحتاج للتدريب المستمر. لقد حصلت على <strong className="font-mono font-bold text-sm bg-amber-100 px-1.5 py-0.5 rounded text-amber-800">+{pointsEarned}</strong> نقطة لمشاركتك الجادة!
-                  </p>
-                </div>
+                
+                <p className="text-[10px] text-natural-muted font-bold text-center">⏳ انتظر تحدي الإعراب القادم غداً لتجمع المزيد من النقاط وتتفوق في قواعد اللغة العربية!</p>
               </div>
             )}
-
-            {/* Detailed Explanations */}
-            <div className="bg-natural-light/60 border border-natural-border/80 p-5 rounded-2xl space-y-3">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 divide-y md:divide-y-0 md:divide-x md:divide-x-reverse divide-natural-border/50">
-                <div className="pb-3 md:pb-0">
-                  <span className="text-[10px] text-natural-muted font-bold block mb-1">إجابتك المكتوبة:</span>
-                  <span className="text-xs text-natural-dark font-bold font-mono bg-white border px-3 py-1.5 rounded-lg inline-block">
-                    {challengeAns}
-                  </span>
-                </div>
-                <div className="pt-3 md:pt-0 md:pr-4">
-                  <span className="text-[10px] text-amber-800 font-bold block mb-1">الإعراب النموذجي المعتمد:</span>
-                  <span className="text-xs text-emerald-800 font-bold font-serif">
-                    {challenge.ideal}
-                  </span>
-                </div>
-              </div>
-
-              <div className="pt-3 border-t border-natural-border/40 text-xs leading-relaxed text-natural-text font-medium">
-                <strong>📝 شرح وتوجيه المعلم الذكي:</strong> {challenge.explanation}
-              </div>
-            </div>
-            
-            <p className="text-[10px] text-natural-muted font-bold text-center">⏳ انتظر تحدي الإعراب القادم غداً لتجمع المزيد من النقاط وتتفوق في قواعد اللغة العربية!</p>
           </div>
         )}
       </div>

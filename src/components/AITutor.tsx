@@ -21,6 +21,7 @@ function normalizeArabic(text: string): string {
 
 export default function AITutor() {
   const [activeMode, setActiveMode] = useState<'chat' | 'grammar' | 'search'>('chat');
+  const [explanationStyle, setExplanationStyle] = useState<'simple' | 'detailed'>('simple');
   const [inputText, setInputText] = useState<string>('');
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
@@ -177,43 +178,49 @@ export default function AITutor() {
     if (searchMatch.length > 0) {
       const match = searchMatch[0];
       if (match.lesson.grammarFocus) {
-        extraContext = `💡 ملاحظة من الدرس الحادي عشر والمنهج المعتمد لدرس "${match.lesson.title}":\n"${match.lesson.grammarFocus}"\n\n`;
+        extraContext = `💡 ملاحظة من درس "${match.lesson.title}":\n"${match.lesson.grammarFocus}"\n\n`;
       }
     }
 
-    let analysis = `📝 تحليل وإعراب الجملة: "${trimmed}"\n`;
+    let analysis = `📝 إعراب الجملة: "${trimmed}" (${explanationStyle === 'simple' ? 'نمط مبسط' : 'نمط تفصيلي'})\n`;
     analysis += `━━━━━━━━━━━━━━━━━━━━━━\n`;
+
+    if (explanationStyle === 'detailed') {
+      analysis += `📌 [قواعد عامة مطبقة في هذا الإعراب]:\n`;
+      analysis += `- فحص الكلمة لتحديد نوعها: (اسم، فعل، حرف).\n`;
+      analysis += `- تحديد الحالة الإعرابية: (الرفع، النصب، الجر) وعلامتها.\n\n`;
+    }
 
     // Try parsing words
     const words = trimmed.split(/\s+/);
     let parsedCount = 0;
 
     // Common words list mapping to Grade 6 rules
-    const rules: { [key: string]: { pos: string, grammatical: string } } = {
-      'ذبح': { pos: 'فعل ماضٍ', grammatical: 'مبني على الفتح الظاهر على آخره.' },
-      'سأل': { pos: 'فعل ماضٍ', grammatical: 'مبني على الفتح الظاهر على آخره.' },
-      'سجدت': { pos: 'فعل ماضٍ', grammatical: 'مبني على السكون لاتصاله بتاء الفاعل، والتاء ضمير متصل مبني في محل رفع فاعل.' },
-      'يعاني': { pos: 'فعل مضارع', grammatical: 'مرفوع وعلامة رفعه الضمة المقدرة للثقل.' },
-      'يواجه': { pos: 'فعل مضارع', grammatical: 'مرفوع وعلامة رفعه الضمة الظاهرة على آخره.' },
-      'الغلام': { pos: 'فاعل', grammatical: 'مرفوع وعلامة رفعه الضمة الظاهرة على آخره.' },
-      'رجل': { pos: 'فاعل', grammatical: 'مرفوع وعلامة رفعه الضمة الظاهرة على آخره.' },
-      'الناس': { pos: 'فاعل أو مفعول به', grammatical: 'حسب موقعها (مرفوع بالضمة أو منصوب بالفتحة).' },
-      'الغنم': { pos: 'مفعول به', grammatical: 'منصوب وعلامة نصبه الفتحة الظاهرة على آخره.' },
-      'المياه': { pos: 'مضاف إليه أو مفعول به', grammatical: 'مجرور بالكسرة أو منصوب بالفتحة.' },
-      'الناجحون': { pos: 'مبتدأ', grammatical: 'مرفوع وعلامة رفعه الواو لأنه جمع مذكر سالم.' },
-      'ماهرون': { pos: 'خبر المبتدأ', grammatical: 'مرفوع وعلامة رفعه الواو لأنه جمع مذكر سالم.' },
-      'المعلم': { pos: 'مبتدأ', grammatical: 'مرفوع وعلامة رفعه الضمة الظاهرة على آخره.' },
-      'محبوب': { pos: 'خبر المبتدأ', grammatical: 'مرفوع وعلامة رفعه الضمة الظاهرة على آخره.' },
-      'الحرية': { pos: 'مبتدأ', grammatical: 'مرفوع وعلامة رفعه الضمة الظاهرة على آخره.' },
-      'شمس': { pos: 'خبر المبتدأ', grammatical: 'مرفوع وعلامة رفعه الضمة الظاهرة على آخره.' },
-      'في': { pos: 'حرف جر', grammatical: 'مبني لا محل له من الإعراب.' },
-      'على': { pos: 'حرف جر', grammatical: 'مبني لا محل له من الإعراب.' },
-      'من': { pos: 'حرف جر', grammatical: 'مبني لا محل له من الإعراب.' },
-      'إلى': { pos: 'حرف جر', grammatical: 'مبني لا محل له من الإعراب.' },
-      'لله': { pos: 'جار ومجرور', grammatical: 'اللام حرف جر، ولفظ الجلالة اسم مجرور وعلامة جره الكسرة الظاهرة.' },
-      'أمس': { pos: 'ظرف زمان', grammatical: 'مبني على الكسر في محل نصب.' },
-      'المفعول': { pos: 'مصطلح نحوي', grammatical: 'يدرس الطالب المفعول به والمفعول المطلق والمفعول لأجله.' },
-      'إياك': { pos: 'ضمير منفصل', grammatical: 'مبني في محل نصب مفعول به لفعل محذوف تقديره (أحذر) وهو أسلوب تحذير.' }
+    const rules: { [key: string]: { pos: string, grammatical: string, detailedGrammar?: string } } = {
+      'ذبح': { pos: 'فعل ماضٍ', grammatical: 'مبني على الفتح الظاهر على آخره.', detailedGrammar: 'فعل ماضٍ ثلاثي مبني على الفتح الظاهر على آخره، والفاعل هو الذي قام بالفعل.' },
+      'سأل': { pos: 'فعل ماضٍ', grammatical: 'مبني على الفتح الظاهر على آخره.', detailedGrammar: 'فعل ماضٍ مبني على الفتح الظاهر، والهمزة فيه همزة قطع أصلية.' },
+      'سجدت': { pos: 'فعل ماضٍ', grammatical: 'مبني على السكون لاتصاله بتاء الفاعل، والتاء ضمير متصل مبني في محل رفع فاعل.', detailedGrammar: 'فعل ماضٍ مبني على السكون لاتصاله بضمير الرفع المتحرك (التاء)، والتاء ضمير متصل مبني على الضم في محل رفع فاعل.' },
+      'يعاني': { pos: 'فعل مضارع', grammatical: 'مرفوع وعلامة رفعه الضمة المقدرة للثقل.', detailedGrammar: 'فعل مضارع مرفوع لتجرده من الناصب والجازم، وعلامة رفعه الضمة المقدرة على الياء منع من ظهورها الثقل.' },
+      'يواجه': { pos: 'فعل مضارع', grammatical: 'مرفوع وعلامة رفعه الضمة الظاهرة على آخره.', detailedGrammar: 'فعل مضارع مرفوع وعلامة رفعه الضمة الظاهرة على آخره، والفاعل ضمير مستتر أو اسم ظاهر.' },
+      'الغلام': { pos: 'فاعل', grammatical: 'مرفوع وعلامة رفعه الضمة الظاهرة على آخره.', detailedGrammar: 'فاعل مرفوع وعلامة رفعه الضمة الظاهرة على آخره، وهو المفرد المعرف بأل الذي قام بالفعل.' },
+      'رجل': { pos: 'فاعل', grammatical: 'مرفوع وعلامة رفعه الضمة الظاهرة على آخره.', detailedGrammar: 'فاعل مرفوع وعلامة رفعه الضمة الظاهرة على آخره، وجاء نكرة ليدل على العموم.' },
+      'الناس': { pos: 'فاعل أو مفعول به', grammatical: 'حسب موقعها (مرفوع بالضمة أو منصوب بالفتحة).', detailedGrammar: 'اسم جنس معرف بأل، يعرب إما فاعلاً مرفوعاً بالضمة الظاهرة أو مفعولاً به منصوباً بالفتحة الظاهرة حسب سياق الجملة.' },
+      'الغنم': { pos: 'مفعول به', grammatical: 'منصوب وعلامة نصبه الفتحة الظاهرة على آخره.', detailedGrammar: 'مفعول به منصوب وعلامة نصبه الفتحة الظاهرة على آخره، وهو الاسم الذي وقع عليه فعل الفاعل.' },
+      'المياه': { pos: 'مضاف إليه أو مفعول به', grammatical: 'مجرور بالكسرة أو منصوب بالفتحة.', detailedGrammar: 'اسم معرف بـ أل، يقع مضافاً إليه مجروراً وعلامة جره الكسرة الظاهرة، أو مفعولاً به منصوباً بالفتحة حسب علاقته بما قبله.' },
+      'الناجحون': { pos: 'مبتدأ', grammatical: 'مرفوع وعلامة رفعه الواو لأنه جمع مذكر سالم.', detailedGrammar: 'مبتدأ مرفوع وعلامة رفعه الواو نيابة عن الضمة لأنه جمع مذكر سالم، والنون عوض عن التنوين في الاسم المفرد.' },
+      'ماهرون': { pos: 'خبر المبتدأ', grammatical: 'مرفوع وعلامة رفعه الواو لأنه جمع مذكر سالم.', detailedGrammar: 'خبر المبتدأ مرفوع وعلامة رفعه الواو نيابة عن الضمة لأنه جمع مذكر سالم، وبه يتم معنى الجملة الاسمية.' },
+      'المعلم': { pos: 'مبتدأ', grammatical: 'مرفوع وعلامة رفعه الضمة الظاهرة على آخره.', detailedGrammar: 'مبتدأ مرفوع وعلامة رفعه الضمة الظاهرة على آخره، وهو الاسم المعرف بأل الذي تبدأ به الجملة الاسمية.' },
+      'محبوب': { pos: 'خبر المبتدأ', grammatical: 'مرفوع وعلامة رفعه الضمة الظاهرة على آخره.', detailedGrammar: 'خبر المبتدأ مرفوع وعلامة رفعه الضمة الظاهرة على آخره، وهو الجزء الذي يكمل الفائدة مع المبتدأ.' },
+      'الحرية': { pos: 'مبتدأ', grammatical: 'مرفوع وعلامة رفعه الضمة الظاهرة على آخره.', detailedGrammar: 'مبتدأ مرفوع وعلامة رفعه الضمة الظاهرة على آخره، وبها تبدأ الجملة لبيان أهميتها.' },
+      'شمس': { pos: 'خبر المبتدأ', grammatical: 'مرفوع وعلامة رفعه الضمة الظاهرة على آخره.', detailedGrammar: 'خبر المبتدأ مرفوع وعلامة رفعه الضمة الظاهرة على آخره، وجاء تشبيهاً بليغاً لتوضيح معنى الحرية.' },
+      'في': { pos: 'حرف جر', grammatical: 'مبني لا محل له من الإعراب.', detailedGrammar: 'حرف جر مبني على السكون لا محل له من الإعراب، ويجر الاسم الواقع بعده.' },
+      'على': { pos: 'حرف جر', grammatical: 'مبني لا محل له من الإعراب.', detailedGrammar: 'حرف جر مبني على السكون المقدر على الألف لا محل له من الإعراب.' },
+      'من': { pos: 'حرف جر', grammatical: 'مبني لا محل له من الإعراب.', detailedGrammar: 'حرف جر مبني على السكون لا محل له من الإعراب، وقد يحرك بالفتح منعاً لالتقاء الساكنين.' },
+      'إلى': { pos: 'حرف جر', grammatical: 'مبني لا محل له من الإعراب.', detailedGrammar: 'حرف جر مبني على السكون المقدر على الألف المقصورة لا محل له من الإعراب.' },
+      'لله': { pos: 'جار ومجرور', grammatical: 'اللام حرف جر، ولفظ الجلالة اسم مجرور وعلامة جره الكسرة الظاهرة.', detailedGrammar: 'اللام حرف جر مبني على الكسر، ولفظ الجلالة (الله) اسم مجرور باللام وعلامة جره الكسرة الظاهرة في آخره.' },
+      'أمس': { pos: 'ظرف زمان', grammatical: 'مبني على الكسر في محل نصب.', detailedGrammar: 'ظرف زمان مبني على الكسر في محل نصب مفعول فيه.' },
+      'المفعول': { pos: 'مصطلح نحوي', grammatical: 'يدرس الطالب المفعول به والمفعول المطلق والمفعول لأجله.', detailedGrammar: 'لفظ نحوي يطلق على الأسماء المنصوبة التابعة للأفعال، مثل المفعول به والمفعول المطلق والمفعول لأجله.' },
+      'إياك': { pos: 'ضمير منفصل', grammatical: 'مبني في محل نصب مفعول به لفعل محذوف تقديره (أحذر) وهو أسلوب تحذير.', detailedGrammar: 'ضمير منفصل مبني على الفتح في محل نصب مفعول به مقدم لفعل محذوف وجوباً تقديره (أحذر)، والكاف للخطاب.' }
     };
 
     words.forEach((w) => {
@@ -224,7 +231,8 @@ export default function AITutor() {
       let found = false;
       for (const [key, val] of Object.entries(rules)) {
         if (normW === normalizeArabic(key) || normW.includes(normalizeArabic(key))) {
-          analysis += `• كلمة [${cleanW}]: هي ${val.pos} 👈 ${val.grammatical}\n`;
+          const detail = explanationStyle === 'detailed' && val.detailedGrammar ? val.detailedGrammar : val.grammatical;
+          analysis += `• كلمة [${cleanW}]: هي ${val.pos} 👈 ${detail}\n`;
           found = true;
           parsedCount++;
           break;
@@ -232,18 +240,30 @@ export default function AITutor() {
       }
 
       if (!found) {
-        // Fallback morphological guessing for grade 6
+        // Fallback guessing
         if (normW.startsWith("ال") && normW.endsWith("ون")) {
-          analysis += `• كلمة [${cleanW}]: جمع مذكر سالم (مرفوع بالواو نيابة عن الضمة).\n`;
+          analysis += `• كلمة [${cleanW}]: جمع مذكر سالم (مرفوع بالواو نيابة عن الضمة، والنون عوض عن التنوين).\n`;
+          if (explanationStyle === 'detailed') {
+            analysis += `  * تفصيل: علامة رفعه فرعية وهي الواو، ويدل على أكثر من اثنين بزيادة واو ونون.\n`;
+          }
           parsedCount++;
         } else if (normW.startsWith("ال") && normW.endsWith("ين")) {
           analysis += `• كلمة [${cleanW}]: جمع مذكر سالم أو مثنى (منصوب أو مجرور بالياء).\n`;
+          if (explanationStyle === 'detailed') {
+            analysis += `  * تفصيل: الياء علامة إعراب فرعية تستعمل في حالتي النصب والجر لجمع المذكر والمثنى.\n`;
+          }
           parsedCount++;
         } else if (normW.startsWith("ال")) {
           analysis += `• كلمة [${cleanW}]: اسم معرّف بـ (أل) وعلامة إعرابه تتبع موقعه في الجملة.\n`;
+          if (explanationStyle === 'detailed') {
+            analysis += `  * تفصيل: اسم معرف بـ ال التعريف، يقبل الحركات الأصلية (الضمة، الفتحة، الكسرة) ولا ينون.\n`;
+          }
           parsedCount++;
         } else if (normW.length >= 3 && (normW.endsWith("ت") || normW.startsWith("ت") || normW.startsWith("ي") || normW.startsWith("ن") || normW.startsWith("أ"))) {
           analysis += `• كلمة [${cleanW}]: فعل (ماضٍ أو مضارع) تظهر عليه علامة البناء أو الإعراب المناسبة.\n`;
+          if (explanationStyle === 'detailed') {
+            analysis += `  * تفصيل: يحتوي على حرف من حروف المضارعة أو تاء الفاعل/التأنيث مما يدل على حركته الزمنية.\n`;
+          }
           parsedCount++;
         } else {
           analysis += `• كلمة [${cleanW}]: اسم أو كلمة تحتاج سياقاً لبيان حالتها الإعرابية التفصيلية.\n`;
@@ -257,10 +277,24 @@ export default function AITutor() {
 
     analysis += `\n━━━━━━━━━━━━━━━━━━━━━━\n`;
     analysis += `${extraContext}`;
+    
+    if (explanationStyle === 'detailed') {
+      analysis += `📘 **قواعد تفصيلية هامة في المقرر:**\n`;
+      analysis += `١. **الفاعل:** اسم مرفوع يقع بعد الفعل المبني للمعلوم ويدل على من فعل الفعل. علامات رفعه:\n`;
+      analysis += `   - الضمة الظاهرة (للمفرد وجمع التكسير وجمع المؤنث السالم).\n`;
+      analysis += `   - الألف (للمثنى).\n`;
+      analysis += `   - الواو (لجمع المذكر السالم والأشخاص الخمسة مثل أبوك أخوك).\n`;
+      analysis += `٢. **المفعول به:** اسم منصوب يدل على من وقع عليه فعل الفاعل. علامات نصبه:\n`;
+      analysis += `   - الفتحة الظاهرة (للمفرد وجمع التكسير).\n`;
+      analysis += `   - الكسرة نيابة عن الفتحة (لجمع المؤنث السالم).\n`;
+      analysis += `   - الياء (للمثنى وجمع المذكر السالم).\n`;
+      analysis += `٣. **المفعول المطلق:** مصدر منصوب يذكر بعد فعل من لفظه لتأكيده أو لبيان نوعه أو عدده.\n\n`;
+    }
+
     analysis += `🎓 نصيحة المعلم النحوية:\n` +
                 `تذكّر يا بني دائماً أن:\n` +
-                `- الفاعل يكون دائماً مرفوعاً (بالضمة للمفرد، وبالألف للمثنى، وبالواو لجمع المذكر السالم).\n` +
-                `- المفعول به يكون دائماً منصوباً بالفتحة أو الكسرة (لجمع المؤنث السالم) أو الياء (للمثنى والجمع).\n` +
+                `- الفاعل يكون دائماً مرفوعاً.\n` +
+                `- المفعول به يكون دائماً منصوباً.\n` +
                 `- المفعول المطلق مصدر منصوب يؤكد الفعل أو يبين نوعه أو عدده (مثل: رابني ريباً، وضربت ضرباً).`;
 
     return analysis;
@@ -272,7 +306,7 @@ export default function AITutor() {
     
     // Quick greeting matches
     if (normQuery.match(/(مرحبا|اهلا|السلام عليكم|سلام|صباح الخير|مساء الخير|كيف حالك)/i)) {
-      return `وعليكم السلام ورحمة الله وبركاته! أهلاً بك يا بني العزيز 🌟\n\nأنا معلمك الافتراضي المساعد هنا لخدمتك طوال الوقت. لقد قمت بالبحث الفوري وتحديث معلوماتي لتطابق تماماً الكتاب المدرسي للصف السادس الابتدائي لجمهورية السودان.\n\nيمكنك سؤالي عن أي درس من دروس كتاب القراءة، القصائد، معاني المفردات، أو القواعد النحوية وسأبسط لك الشرح فوراً وبدون أي تكلفة! كيف يمكنني مساعدتك؟`;
+      return `وعليكم السلام ورحمة الله وبركاته! أهلاً بك يا بني العزيز 🌟\n\nأنا معلمك الافتراضي المساعد هنا لخدمتك طوال الوقت في إطار المنهج المدرسي للصف السادس الابتدائي لجمهورية السودان.\n\nلقد حددت نمط الشرح الحالي ليكون: **[${explanationStyle === 'simple' ? 'شرح مبسط ومختصر 📚' : 'شرح تفصيلي وشامل 🔍'}]**.\n\nيمكنك سؤالي عن أي درس من دروس كتاب القراءة، القصائد، معاني المفردات، أو القواعد النحوية وسأبسط لك الشرح فوراً وبدون أي تكلفة! كيف يمكنني مساعدتك؟`;
     }
 
     // Search curriculum
@@ -282,47 +316,93 @@ export default function AITutor() {
       const bestMatch = searchMatches[0];
       const lesson = bestMatch.lesson;
       
-      let response = `👨‍🏫 أهلاً بك! لقد بحثت في كتاب القراءة ووجدت لك شرحاً وافياً في:\n`;
-      response += `📖 **${lesson.title}** (الوحدة ${bestMatch.unitNumber} • صفحة ${lesson.page})\n\n`;
-      
-      if (lesson.author) {
-        response += `✍️ من تأليف الكاتب/الشاعر: **${lesson.author}**\n\n`;
+      if (explanationStyle === 'simple') {
+        let response = `👨‍🏫 أهلاً بك! إليك **شرحاً مبسطاً وسريعاً** من درس:\n`;
+        response += `📖 **${lesson.title}** (صفحة ${lesson.page})\n\n`;
+        
+        response += `📝 **الفكرة الأساسية للدرس:**\n`;
+        response += `"${lesson.text.substring(0, 180)}..."\n\n`;
+
+        if (lesson.vocabulary && lesson.vocabulary.length > 0) {
+          response += `💡 **أهم مفردة في الدرس:**\n`;
+          const v = lesson.vocabulary[0];
+          response += `• الكلمة: **${v.word}** 👈 تعني: "${v.meaning}"${v.opposite ? ` (مضادها: "${v.opposite}")` : ""}\n\n`;
+        }
+
+        if (lesson.grammarFocus) {
+          response += `🔍 **القاعدة النحوية باختصار:**\n`;
+          response += `${lesson.grammarFocus.split(/[.،]/)[0]}...\n\n`;
+        }
+
+        response += `🙋‍♂️ هل تود معرفة تفاصيل أكثر وتعمق أكبر؟ يمكنك تغيير نمط الشرح إلى "شرح تفصيلي" في الأعلى!`;
+        return response;
+      } else {
+        // Detailed Style
+        let response = `👨‍🏫 أهلاً بك يا بني! إليك **شرحاً تفصيلياً وتعمقاً شاملاً** لدرس:\n`;
+        response += `📖 **${lesson.title}** (الوحدة ${bestMatch.unitNumber} • صفحة ${lesson.page})\n\n`;
+        
+        if (lesson.author) {
+          response += `✍️ كاتب/شاعر هذا الدرس هو الأديب: **${lesson.author}**، وتتميز كتاباته بالبلاغة والأسلوب اللغوي المتميز في المنهج السوداني.\n\n`;
+        }
+
+        response += `📝 **النص الكامل والمعتمد للدرس:**\n`;
+        response += `"${lesson.text}"\n\n`;
+
+        if (lesson.vocabulary && lesson.vocabulary.length > 0) {
+          response += `💡 **معجم المفردات والتراكيب اللغوية بالتفصيل:**\n`;
+          lesson.vocabulary.forEach((v) => {
+            response += `• الكلمة: **${v.word}**\n  👈 المعنى اللغوي: "${v.meaning}"\n${v.opposite ? `  👈 المضاد/العكس: "${v.opposite}"\n` : ""}`;
+          });
+          response += `\n`;
+        }
+
+        if (lesson.grammarFocus) {
+          response += `🔍 **الدراسة النحوية والقواعد المرتبطة بالدرس:**\n`;
+          response += `${lesson.grammarFocus}\n\n`;
+          response += `🛡️ **تطبيقات نحوية مستخرجة من الدرس:**\n`;
+          response += `١. استخراج الكلمات وتصنيفها من حيث علامات الإعراب الأصلية والفرعية.\n`;
+          response += `٢. دراسة التركيب النحوي للجمل المستفادة وتحديد أركانها الرئيسية والفرعية.\n\n`;
+        }
+
+        if (lesson.quiz && lesson.quiz.length > 0) {
+          response += `❓ **سؤال تفاعلي لتقييم الفهم واستيعاب الدرس:**\n`;
+          const q = lesson.quiz[0];
+          response += `السؤال: ${q.question}\n`;
+          response += `👈 الإجابة النموذجية مع الشرح: **${q.answer}**\n`;
+          if (q.explanation) {
+            response += `   *توضيح تربوي:* ${q.explanation}\n\n`;
+          }
+        }
+
+        response += `✨ يمكنك سؤالي عن إعراب أي جملة محددة من هذا النص، أو الاستفسار عن تفاصيل المعاني، وسأجيبك بكل سرور!`;
+        return response;
       }
-
-      // Add snippets
-      response += `📝 **مقتطف من نص الدرس المعتمد:**\n`;
-      response += `"${lesson.text.substring(0, 350)}..."\n\n`;
-
-      if (lesson.vocabulary && lesson.vocabulary.length > 0) {
-        response += `💡 **معاني المفردات الهامة في هذا الدرس:**\n`;
-        lesson.vocabulary.slice(0, 3).forEach((v) => {
-          response += `• الكلمة: **${v.word}** 👈 معناها: "${v.meaning}"${v.opposite ? ` (ضدها: "${v.opposite}")` : ""}\n`;
-        });
-        response += `\n`;
-      }
-
-      if (lesson.grammarFocus) {
-        response += `🔍 **القاعدة النحوية المستفادة هنا:**\n`;
-        response += `${lesson.grammarFocus}\n\n`;
-      }
-
-      response += `🙋‍♂️ هل تريد مني إعراب أي جملة من هذا الدرس، أو الانتقال لقصيدة أخرى؟ اكتب لي وسأجيبك فوراً!`;
-      return response;
     }
 
     // Fallback general guidance
-    return `👨‍🏫 مرحباً بك يا بني! لقد قمت بالبحث في كامل فصول كتاب اللغة العربية المطور للصف السادس.\n\nلم أجد نصاً مباشراً يتطابق تماماً مع سؤالك: "${query}"، ولكن إليك بعض المواضيع المقترحة التي تتقنها محركاتي تماماً:\n` +
-           `• قصة كرم حاتم الطائي (الوحدة الأولى)\n` +
-           `• ترشيد استهلاك المياه وسدود السودان (الوحدة الأولى)\n` +
-           `• قصة المأمون ومؤدب ولديه يحيى الفراء (الوحدة الأولى)\n` +
-           `• وصايا الحكيم لابنه والكذب ومجالس الصالحين (الوحدة الأولى)\n` +
-           `• عناصر النجاح الستة (الثقة، التواضع، المسؤولية، الإصرار...) (الوحدة الثانية)\n` +
-           `• الوقت وأهميته وقصيدة أبو العلاء المعري (الوحدة الثانية)\n` +
-           `• الحرية شمس وقصة الهرة والكاتب مصطفى لطفي المنفلوطي (الوحدة الثانية)\n` +
-           `• قصيدة وفاء الكلب للشاعر أحمد شوقي (الوحدة الثانية)\n` +
-           `• قصة إحسان وأختها أروى وعملها في عيادة الطبيب (الوحدة الثانية)\n` +
-           `• قصة ثورة الكتب ويعقوب وسقوط الملك المستبد (الوحدة الثانية)\n\n` +
-           `اكتب أي كلمة أو سؤال بخصوص هذه المواضيع وسأعطيك الإجابة الفورية النموذجية! ✨`;
+    if (explanationStyle === 'simple') {
+      return `👨‍🏫 مرحباً بك يا بني! لقد بحثت في فصول كتاب اللغة العربية للصف السادس.\n\nلم أجد نصاً مباشراً يتطابق تماماً مع سؤالك: "${query}".\n\n💡 **مواضيع مقترحة يسهل شرحها:**\n` +
+             `• قصة كرم حاتم الطائي (الوحدة الأولى)\n` +
+             `• ترشيد استهلاك المياه وسدود السودان (الوحدة الأولى)\n` +
+             `• عناصر النجاح الستة (الوحدة الثانية)\n` +
+             `• قصيدة وفاء الكلب لأحمد شوقي (الوحدة الثانية)\n\n` +
+             `اكتب أي سؤال بخصوص هذه المواضيع وسأبسط لك الشرح فوراً! ✨`;
+    } else {
+      return `👨‍🏫 مرحباً بك يا بني! لقد قمت بالبحث المعمق في كامل فصول كتاب المنهج المطور للصف السادس لجمهورية السودان.\n\nلم أجد نصاً مباشراً يتطابق تماماً مع سؤالك: "${query}"، ولكن إليك دليلاً شاملاً للمواضيع التي تتقنها محركاتي تماماً ويمكنك الاستفسار عنها:\n\n` +
+             `📖 **مواضيع الوحدة الأولى (العقيدة والوطن وكرم العرب):**\n` +
+             `• قصة كرم حاتم الطائي وأهمية المروءة والسخاء.\n` +
+             `• ترشيد استهلاك المياه وسدود السودان (سد سنار وسد الروصيرص).\n` +
+             `• قصة الخليفة المأمون ومؤدب ولديه يحيى بن زياد الفراء.\n` +
+             `• وصايا الحكيم لابنه والابتعاد عن الكذب ومجالس الصالحين.\n\n` +
+             `📖 **مواضيع الوحدة الثانية (النجاح والوقت والحرية والوفاء والتعاون):**\n` +
+             `• عناصر النجاح الستة (الثقة بالله، التواضع، المسؤولية، الإصرار، الإبداع، المهارة).\n` +
+             `• الوقت وأهميته وقصيدة أبو العلاء المعري في تنظيم الساعات.\n` +
+             `• الحرية شمس وقصة الهرة والكاتب مصطفى لطفي المنفلوطي.\n` +
+             `• قصيدة وفاء الكلب الرائعة للشاعر أحمد شوقي.\n` +
+             `• قصة إحسان وأختها أروى والعمل الإنساني في عيادة الطبيب.\n` +
+             `• قصة ثورة الكتب وصراع العلم ضد الملك المستبد.\n\n` +
+             `اكتب أي كلمة مفتاحية أو سؤال تفصيلي بخصوص هذه المواضيع وسأعطيك الشرح الكامل والإجابة الفورية النموذجية! ✨`;
+    }
   };
 
   // Execute query wrapper simulating response latency for pleasant UI/UX feel
@@ -428,6 +508,41 @@ export default function AITutor() {
           >
             <Search className="h-3.5 w-3.5 ml-1.5" />
             البحث اللفظي
+          </button>
+        </div>
+      </div>
+
+      {/* Explanation Style Selection Bar */}
+      <div className="bg-white border border-natural-border px-6 py-4 rounded-3xl flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 shadow-sm" dir="rtl">
+        <div className="flex items-center space-x-3 space-x-reverse">
+          <div className="bg-amber-100 p-2 rounded-lg text-amber-600">
+            <Sparkles className="h-4 w-4 animate-pulse" />
+          </div>
+          <div>
+            <span className="text-xs sm:text-sm font-bold text-natural-dark font-serif block">نمط وعمق الشرح التعليمي:</span>
+            <p className="text-[10px] text-natural-muted font-medium mt-0.5">اختر بين التوضيح المبسط السريع أو الشرح المتعمق والمفصل للإعراب والمفردات.</p>
+          </div>
+        </div>
+        <div className="flex p-1 bg-natural-light rounded-xl border border-natural-border/60 self-start sm:self-center">
+          <button
+            onClick={() => setExplanationStyle('simple')}
+            className={`px-4 py-2 rounded-lg text-xs font-extrabold transition-all duration-200 cursor-pointer ${
+              explanationStyle === 'simple'
+                ? 'bg-rose-600 text-white shadow-sm'
+                : 'text-natural-muted hover:text-natural-dark'
+            }`}
+          >
+            📚 شرح مبسط ومختصر
+          </button>
+          <button
+            onClick={() => setExplanationStyle('detailed')}
+            className={`px-4 py-2 rounded-lg text-xs font-extrabold transition-all duration-200 cursor-pointer ${
+              explanationStyle === 'detailed'
+                ? 'bg-teal-700 text-white shadow-sm'
+                : 'text-natural-muted hover:text-natural-dark'
+            }`}
+          >
+            🔍 شرح تفصيلي ومتعمق
           </button>
         </div>
       </div>

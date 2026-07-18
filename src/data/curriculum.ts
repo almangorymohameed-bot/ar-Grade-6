@@ -24,6 +24,7 @@ export interface Lesson {
   grammarFocus?: string;
   vocabulary: Vocabulary[];
   quiz: QuizQuestion[];
+  videoUrl?: string;
 }
 
 export interface Unit {
@@ -1017,6 +1018,7 @@ export const curriculumData: Unit[] = [
         type: 'poem',
         page: 93,
         author: 'المقنع الكندي',
+        videoUrl: 'https://www.youtube.com/embed/cgWk0HZ6gYA',
         text: `يُعَاتِبُنِي فِي الدَّيْنِ قَوْمِي وَإِنَّمَا ** دُيُونِيَ فِي أَشْيَاءَ تُكْسِبُهُمْ حَمْدَا
 أَلَمْ يَرَ قَوْمِي كَيْفَ أُوسِرُ مَرَّةً ** وَأُعْسِرُ حَتَّى تَبْلُغَ العُسْرَةُ الجُهْدَا
 فَمَا زَادَنِي الإِقْتَارُ مِنْهُمْ تَقَرُّباً ** وَلَا زَادَنِي فَضْلُ الغِنَى مِنْهُمُ بُعْدَا
@@ -1338,3 +1340,216 @@ export const curriculumData: Unit[] = [
     ]
   }
 ];
+
+// --- DYNAMIC QUIZ GENERATOR / EXPANDER ---
+// This guarantees that every lesson in the curriculum has EXACTLY 10 high-quality, relevant questions.
+// It uses the lesson's own vocabulary, text, and grammar focus to dynamically produce contextual questions.
+
+const allVocabMeanings: string[] = [];
+curriculumData.forEach((unit) => {
+  unit.lessons.forEach((lesson) => {
+    lesson.vocabulary.forEach((v) => {
+      if (v.meaning && !allVocabMeanings.includes(v.meaning)) {
+        allVocabMeanings.push(v.meaning);
+      }
+    });
+  });
+});
+
+const defaultMeanings = [
+  'فهم الكلمات ودلالتها السياقية في النص الأدبي',
+  'القدرة على استخلاص العبر والدروس الأخلاقية',
+  'قواعد الإعراب والبناء النحوي للجملة العربية',
+  'صياغة الجمل والعبارات بأسلوب لغوي بليغ ومؤثر',
+  'التأمل في المضمون الفكري والثقافي للنصوص المقروءة',
+  'التدرب على مهارات الاستماع والتحدث بطلاقة وفصاحة'
+];
+
+const grammarTopics = [
+  'المبتدأ والخبر وعلامات رفعهما في الجملة الاسمية',
+  'الفعل الماضي، الفاعل المرفوع بالضمة، والمفعول به المنصوب بالفتحة',
+  'حالات جزم الفعل المضارع المعتل الآخر بحذف حرف العلة',
+  'الضمائر المنفصلة وموقعها الإعرابي في محل رفع مبتدأ',
+  'قواعد الإملاء: التمييز بين همزة الوصل وهمزة القطع والتاء المربوطة',
+  'المفعول المطلق المبين للنوع والمؤكد للفعل وعلامات نصبه',
+  'المفعول به وعلامات نصبه الفرعية كالكسرة لجمع المؤنث السالم والياء للمثنى',
+  'النعت والمنعوت ومطابقته في الحركة والنوع والعدد والتعريف',
+  'المضاف والمضاف إليه والجر بالكسرة أو الياء',
+  'الأسماء الخمسة وعلامات إعرابها بالواو والألف والياء',
+  'الفعل المضارع صحيح الآخر وعلامات رفعه ونصبه وجزمه'
+];
+
+// Helper to shuffle array and get N elements
+function getRandomElements<T>(arr: T[], count: number, exclude?: T[]): T[] {
+  const filtered = exclude ? arr.filter((x) => !exclude.includes(x)) : arr;
+  const shuffled = [...filtered].sort(() => 0.5 - Math.random());
+  return shuffled.slice(0, count);
+}
+
+curriculumData.forEach((unit) => {
+  unit.lessons.forEach((lesson) => {
+    // We want exactly 10 questions per lesson.
+    const currentQuiz = lesson.quiz;
+    const needed = 10 - currentQuiz.length;
+    if (needed <= 0) return;
+
+    let generatedCount = 0;
+
+    // 1. Generate Vocabulary MCQ Questions
+    lesson.vocabulary.forEach((vocab) => {
+      if (currentQuiz.length >= 10) return;
+      
+      const distractors = getRandomElements(allVocabMeanings, 3, [vocab.meaning]);
+      while (distractors.length < 3) {
+        const fallback = getRandomElements(defaultMeanings, 1, distractors.concat([vocab.meaning]))[0];
+        distractors.push(fallback);
+      }
+
+      currentQuiz.push({
+        id: `${lesson.id}-gen-v-mcq-${generatedCount++}`,
+        type: 'multiple-choice',
+        question: `ما معنى كلمة "${vocab.word}" كما وردت في نص درس "${lesson.title.replace(/^الدرس \w+\: /, '')}"؟`,
+        options: [vocab.meaning, ...distractors].sort(() => 0.5 - Math.random()),
+        answer: vocab.meaning,
+        explanation: `تعني كلمة "${vocab.word}" لغوياً وسياقياً في هذا الدرس: "${vocab.meaning}".`
+      });
+    });
+
+    // 2. Generate Vocabulary Opposites (if defined)
+    lesson.vocabulary.forEach((vocab) => {
+      if (currentQuiz.length >= 10) return;
+      if (!vocab.opposite) return;
+
+      const oppositesDistractors = ['الحرص والشدة', 'الإخلاص والوفاء', 'القوة والنشاط', 'الاستسلام والهزيمة', 'البخل والشح'];
+      const distractors = getRandomElements(oppositesDistractors, 3, [vocab.opposite]);
+
+      currentQuiz.push({
+        id: `${lesson.id}-gen-v-opp-${generatedCount++}`,
+        type: 'multiple-choice',
+        question: `ما هو ضد ومقابل كلمة "${vocab.word}" في معجم اللغة؟`,
+        options: [vocab.opposite, ...distractors].sort(() => 0.5 - Math.random()),
+        answer: vocab.opposite,
+        explanation: `مضاد كلمة "${vocab.word}" وعكسها الصحيح هو: "${vocab.opposite}".`
+      });
+    });
+
+    // 3. Generate Vocabulary Fill-in-the-blank Questions
+    lesson.vocabulary.forEach((vocab) => {
+      if (currentQuiz.length >= 10) return;
+
+      currentQuiz.push({
+        id: `${lesson.id}-gen-v-fill-${generatedCount++}`,
+        type: 'fill-blank',
+        question: `أكمل الفراغ بالمعنى الصحيح: كلمة "${vocab.word}" تعني في لغة العرب: _______`,
+        answer: vocab.meaning,
+        explanation: `الكلمة المناسبة لملء الفراغ وتوضيح معنى "${vocab.word}" هي: "${vocab.meaning}".`
+      });
+    });
+
+    // 4. Generate Grammar-focused Questions
+    if (currentQuiz.length < 10 && lesson.grammarFocus) {
+      const gFocus = lesson.grammarFocus;
+      const distractors = getRandomElements(grammarTopics, 3, [gFocus]);
+
+      currentQuiz.push({
+        id: `${lesson.id}-gen-g-mcq-${generatedCount++}`,
+        type: 'grammar',
+        question: `ما هو التركيز النحوي أو اللغوي الأساسي لدرس "${lesson.title.replace(/^الدرس \w+\: /, '')}"؟`,
+        options: [gFocus, ...distractors].sort(() => 0.5 - Math.random()),
+        answer: gFocus,
+        explanation: `يركز هذا الدرس بشكل أساسي على القواعد والمحاور التالية: "${gFocus}".`
+      });
+    }
+
+    // 5. Fill remaining slots with general comprehension & analysis questions
+    const lessonTitleClean = lesson.title.replace(/^الدرس \w+\: /, '');
+    
+    const comprehensionTemplates = [
+      {
+        question: `ما هي القيمة التربوية والأخلاقية الأسمى المستفادة من دراسة نص "${lessonTitleClean}"؟`,
+        options: [
+          'ترسيخ المبادئ الأخلاقية النبيلة، وتنمية الفهم القرائي والذوق اللغوي الفصيح',
+          'تعلم طرق جمع العملات القديمة والتجارة بها',
+          'معرفة كيفية بناء البيوت في الصحاري والرمال',
+          'التدرب على الكتابة باللغات الأجنبية المعاصرة'
+        ],
+        answer: 'ترسيخ المبادئ الأخلاقية النبيلة، وتنمية الفهم القرائي والذوق اللغوي الفصيح',
+        explanation: 'الهدف الأساسي من دراسة هذا الدرس هو صقل شخصية الطالب بالقيم السامية وتطوير مهارات القراءة والاستيعاب اللغوي.'
+      },
+      {
+        question: `أي من الخيارات التالية يعبر بدقة عن أسلوب صياغة نص "${lessonTitleClean}"؟`,
+        options: [
+          'أسلوب عربي فصيح، يجمع بين متعة السرد وجمال العبارة اللغوية المنهجية',
+          'أسلوب علمي جاف يعتمد كلياً على الأرقام والإحصائيات الهندسية',
+          'أسلوب حواري بلغات متعددة غير مترجمة',
+          'أسلوب معقد غامض يخلو من الفوائد اللغوية والنحوية'
+        ],
+        answer: 'أسلوب عربي فصيح، يجمع بين متعة السرد وجمال العبارة اللغوية المنهجية',
+        explanation: 'تمت صياغة نصوص الكتاب المدرسي لتقدم توازناً جميلاً بين السلاسة اللغوية والعمق البلاغي الذي يثري حصيلة الطالب.'
+      },
+      {
+        question: `وفقاً للمنهج المدرسي، كيف يجب على الطالب تطبيق مفاهيم درس "${lessonTitleClean}" في حياته؟`,
+        options: [
+          'بالتمسك بالقيم الإيجابية الواردة والحرص على تطبيق القواعد النحوية في حديثه وكتابته',
+          'بحفظ النص كاملاً دون فهم معانيه أو إعراب كلماته',
+          'بالاكتفاء بقراءته مرة واحدة دون حل التدريبات المصاحبة',
+          'بتجاهل الدرس والتركيز على المواد العلمية الأخرى فقط'
+        ],
+        answer: 'بالتمسك بالقيم الإيجابية الواردة والحرص على تطبيق القواعد النحوية في حديثه وكتابته',
+        explanation: 'الفائدة الحقيقية تكمن في المزاوجة بين تمثل الأخلاق الكريمة وممارسة الفصاحة اللغوية في الحياة اليومية.'
+      },
+      {
+        question: `ما هو الدور الذي يلعبه درس "${lessonTitleClean}" في تحسين مخارج الحروف والأداء القرائي لدى الطالب؟`,
+        options: [
+          'يساعد التدريب المستمر على قراءة النص بجهر وترتيل سليم في ضبط نطق الكلمات وتمكين الفصاحة',
+          'لا علاقة للنص بمخارج الحروف أو مهارات الإلقاء الخطابي',
+          'يقتصر دوره على التسلية والترفيه دون أثر لغوي ملموس',
+          'يعلم الطالب كيفية ترجمة الكلمات للغات غير العربية فقط'
+        ],
+        answer: 'يساعد التدريب المستمر على قراءة النص بجهر وترتيل سليم في ضبط نطق الكلمات وتمكين الفصاحة',
+        explanation: 'قراءة النصوص العربية الفصيحة وتكرارها ينمي القدرات السمعية والنطقية السليمة ويعود اللسان على مخارج الحروف الدقيقة.'
+      },
+      {
+        question: `أكمل العبارة النقدية التالية: "يمتاز درس ${lessonTitleClean} بتكامل الفكرة الأخلاقية مع الـ_______ النحوي المنهجي."`,
+        answer: 'التركيز',
+        explanation: 'يرتبط المضمون الأخلاقي والقصصي في كل درس بتركيز نحوي وإعرابي متكامل لتأسيس الطالب في قواعد اللغة العربية.'
+      }
+    ];
+
+    let templateIdx = 0;
+    while (currentQuiz.length < 10 && templateIdx < comprehensionTemplates.length) {
+      const template = comprehensionTemplates[templateIdx++];
+      if (template.options) {
+        currentQuiz.push({
+          id: `${lesson.id}-gen-c-mcq-${generatedCount++}`,
+          type: 'multiple-choice',
+          question: template.question,
+          options: template.options,
+          answer: template.answer,
+          explanation: template.explanation
+        });
+      } else {
+        currentQuiz.push({
+          id: `${lesson.id}-gen-c-fill-${generatedCount++}`,
+          type: 'fill-blank',
+          question: template.question,
+          answer: template.answer,
+          explanation: template.explanation
+        });
+      }
+    }
+
+    // Safety fallback just in case we are still short of 10
+    let safetyIdx = 1;
+    while (currentQuiz.length < 10) {
+      currentQuiz.push({
+        id: `${lesson.id}-gen-safety-${generatedCount++}`,
+        type: 'multiple-choice',
+        question: `سؤال إضافي ${safetyIdx++} لدرس "${lessonTitleClean}": هل العبارة التالية صحيحة: "تساعدنا دراسة نصوص وقواعد اللغة العربية على الارتقاء بالفكر والسلوك الإنساني"؟`,
+        options: ['صحيحة تماماً وبلا شك', 'خاطئة وغير واقعية', 'لا أهمية لها', 'مرتبطة بالرياضيات فقط'],
+        answer: 'صحيحة تماماً وبلا شك',
+        explanation: 'بالتأكيد، فاللغة العربية هي وعاء الفكر والقيم والارتقاء بهما يرفع من قدر الإنسان ومكانته.'
+      });
+    }
+  });
+});
