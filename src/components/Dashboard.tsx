@@ -97,6 +97,71 @@ const dailyChallenges = [
   }
 ];
 
+// Quick Grammar Questions for Daily interaction
+const quickGrammarQuestions = [
+  {
+    id: "g1",
+    question: "ما هو الفاعل في جملة: 'ذبحَ الغلامُ الغنمَ'؟",
+    options: ["ذبحَ", "الغلامُ", "الغنمَ", "ضمير مستتر"],
+    correctIndex: 1,
+    points: 15,
+    explanation: "الفاعل هو 'الغلامُ' لأنه هو من قام بالفعل (الذبح) وهو مرفوع بالضمة الظاهرة."
+  },
+  {
+    id: "g2",
+    question: "كلمة 'سجدتينِ' في جملة 'سجدتُ لله سجدتينِ' هي مفعول مطلق منصوب وعلامة نصبه:",
+    options: ["الفتحة الظاهرة", "الضمة المقدرة", "الياء لأنه مثنى", "الكسرة"],
+    correctIndex: 2,
+    points: 15,
+    explanation: "علامة نصب المثنى هي الياء، لذا 'سجدتينِ' منصوب وعلامة نصبه الياء."
+  },
+  {
+    id: "g3",
+    question: "ما نوع كلمة 'ماهرونَ' في جملة 'الناجحونَ ماهرونَ'؟",
+    options: ["مبتدأ ثانٍ", "خبر المبتدأ", "فاعل مرفوع", "مضاف إليه مجرور"],
+    correctIndex: 1,
+    points: 15,
+    explanation: "'ماهرونَ' هي خبر المبتدأ مرفوع وعلامة رفعه الواو لأنه جمع مذكر سالم."
+  },
+  {
+    id: "g4",
+    question: "في جملة 'تموءُ الهرةُ مواءً'، ما إعراب كلمة 'مواءً'؟",
+    options: ["مفعول مطلق منصوب", "مفعول به منصوب", "فاعل مرفوع", "صفة منصوبة"],
+    correctIndex: 0,
+    points: 15,
+    explanation: "'مواءً' مفعول مطلق منصوب وعلامة نصبه الفتحة الظاهرة لأنه مصدر مشتق من لفظ الفعل نفسه لتأكيده."
+  },
+  {
+    id: "g5",
+    question: "ما إعراب كلمة 'المياهِ' في جملة 'ترشيدُ استهلاكِ المياهِ'؟",
+    options: ["فاعل مرفوع", "خبر المبتدأ", "مضاف إليه مجرور", "مفعول مطلق منصوب"],
+    correctIndex: 2,
+    points: 15,
+    explanation: "'المياهِ' مضاف إليه مجرور وعلامة جره الكسرة الظاهرة لأنه اسم معرفة جاء لتحديد وتوضيح الكلمة النكرة قبله."
+  },
+  {
+    id: "g6",
+    question: "ما علامة رفع جمع المذكر السالم؟",
+    options: ["الضمة الظاهرة", "الألف", "الواو", "ثبوت النون"],
+    correctIndex: 2,
+    points: 15,
+    explanation: "علامة رفع جمع المذكر السالم هي الواو (مثل: الناجحون، المعلمون)."
+  },
+  {
+    id: "g7",
+    question: "أي من الجمل التالية تحتوي على مفعول مطلق مبين للنوع؟",
+    options: [
+      "دَرَسَ الطالبُ دراسةً.",
+      "سجدتُ لله سجدتينِ خاشعتينِ.",
+      "أحببتُ المعرضَ إعجاباً كبيراً.",
+      "جاءَ المعلمُ في الصباح."
+    ],
+    correctIndex: 2,
+    points: 15,
+    explanation: "الجملة 'إعجاباً كبيراً' تحتوي على مفعول مطلق موصوف بكلمة 'كبيراً' لبيان نوع الإعجاب وتحديده."
+  }
+];
+
 export default function Dashboard({ completedLessons, quizScores, recentScores, points, onAwardPoints, onNavigateToTab }: DashboardProps) {
   // Daily Challenge State & Logic
   const todayKey = new Date().toDateString();
@@ -110,7 +175,16 @@ export default function Dashboard({ completedLessons, quizScores, recentScores, 
   const [showHint, setShowHint] = React.useState(false);
   const [isChallengeExpanded, setIsChallengeExpanded] = React.useState(false);
 
+  // Quick Grammar Question State & Logic
+  const quickGrammarIndex = new Date().getDate() % quickGrammarQuestions.length;
+  const quickGrammarQ = quickGrammarQuestions[quickGrammarIndex];
+
+  const [quickAnsIndex, setQuickAnsIndex] = React.useState<number | null>(null);
+  const [quickAnswered, setQuickAnswered] = React.useState(false);
+  const [quickIsCorrect, setQuickIsCorrect] = React.useState(false);
+
   React.useEffect(() => {
+    // 1. Daily Parsing Challenge
     const savedDate = localStorage.getItem('ar_challenge_date');
     const savedSubmitted = localStorage.getItem('ar_challenge_submitted');
     const savedSuccess = localStorage.getItem('ar_challenge_success');
@@ -137,7 +211,50 @@ export default function Dashboard({ completedLessons, quizScores, recentScores, 
       localStorage.removeItem('ar_challenge_user_ans');
       localStorage.removeItem('ar_challenge_points_earned');
     }
+
+    // 2. Quick Grammar Question
+    const savedQuickDate = localStorage.getItem('ar_quick_grammar_date');
+    const savedQuickAnswered = localStorage.getItem('ar_quick_grammar_answered');
+    const savedQuickIsCorrect = localStorage.getItem('ar_quick_grammar_correct');
+    const savedQuickSelected = localStorage.getItem('ar_quick_grammar_selected');
+
+    if (savedQuickDate === todayKey) {
+      if (savedQuickAnswered === 'true') {
+        setQuickAnswered(true);
+      }
+      if (savedQuickIsCorrect === 'true') {
+        setQuickIsCorrect(true);
+      }
+      if (savedQuickSelected !== null && savedQuickSelected !== undefined) {
+        setQuickAnsIndex(parseInt(savedQuickSelected, 10));
+      }
+    } else {
+      // Clear for a new day
+      localStorage.removeItem('ar_quick_grammar_answered');
+      localStorage.removeItem('ar_quick_grammar_correct');
+      localStorage.removeItem('ar_quick_grammar_selected');
+    }
   }, [todayKey]);
+
+  const handleAnswerQuickGrammar = (index: number) => {
+    if (quickAnswered) return;
+
+    const isCorrect = index === quickGrammarQ.correctIndex;
+    const pts = isCorrect ? quickGrammarQ.points : 0;
+
+    setQuickAnsIndex(index);
+    setQuickAnswered(true);
+    setQuickIsCorrect(isCorrect);
+
+    localStorage.setItem('ar_quick_grammar_date', todayKey);
+    localStorage.setItem('ar_quick_grammar_answered', 'true');
+    localStorage.setItem('ar_quick_grammar_correct', isCorrect ? 'true' : 'false');
+    localStorage.setItem('ar_quick_grammar_selected', index.toString());
+
+    if (pts > 0) {
+      onAwardPoints(pts);
+    }
+  };
 
   const handleSubmitChallenge = () => {
     if (!challengeAns.trim()) return;
@@ -430,6 +547,95 @@ export default function Dashboard({ completedLessons, quizScores, recentScores, 
             )}
           </div>
         )}
+      </div>
+      
+      {/* Quick Grammar Question Card ("سؤال قواعد سريع") */}
+      <div className="bg-white border-2 border-indigo-100 rounded-3xl p-6 sm:p-8 space-y-6 shadow-sm relative overflow-hidden transition-all duration-300">
+        {/* Background decorative elements */}
+        <div className="absolute right-0 bottom-0 h-28 w-28 bg-indigo-500/5 rounded-full blur-2xl pointer-events-none" />
+        
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-3 sm:space-y-0 border-b border-natural-border pb-4">
+          <div className="flex items-center space-x-3 space-x-reverse">
+            <div className="bg-indigo-50 p-2.5 rounded-2xl border border-indigo-100 text-indigo-600 transition-all">
+              <HelpCircle className="h-6 w-6 animate-pulse" />
+            </div>
+            <div>
+              <h3 className="text-lg font-bold font-serif text-natural-dark flex items-center">
+                سؤال قواعد سريع
+                <span className="mr-2 text-[10px] bg-indigo-50 text-indigo-700 border border-indigo-150 px-2.5 py-0.5 rounded-full font-bold">تحدي لغوي جديد</span>
+              </h3>
+              <p className="text-natural-muted text-xs mt-1 font-medium">
+                اختبر معلوماتك في القواعد النحوية اليومية واكسب نقاطاً إضافية فوراً! ⚡
+              </p>
+            </div>
+          </div>
+          
+          <div className="flex items-center space-x-2 space-x-reverse bg-indigo-50/50 border border-indigo-100/80 px-3 py-1.5 rounded-xl self-start sm:self-center">
+            <Sparkles className="h-4 w-4 text-indigo-600" />
+            <span className="text-xs text-indigo-800 font-bold">🎯 جائزة التحدي: +{quickGrammarQ.points} نقطة</span>
+          </div>
+        </div>
+
+        <div className="space-y-4 text-right">
+          <div className="text-sm sm:text-base text-natural-dark font-serif font-bold leading-relaxed bg-indigo-50/20 p-4 rounded-xl border border-indigo-50/50">
+            {quickGrammarQ.question}
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {quickGrammarQ.options.map((option, index) => {
+              const isSelected = quickAnsIndex === index;
+              const isCorrectOpt = index === quickGrammarQ.correctIndex;
+              let btnClass = "bg-natural-light border-2 border-natural-border hover:border-indigo-300 hover:bg-indigo-50/30 text-natural-dark";
+
+              if (quickAnswered) {
+                if (isCorrectOpt) {
+                  btnClass = "bg-emerald-50 border-2 border-emerald-300 text-emerald-800 font-bold";
+                } else if (isSelected) {
+                  btnClass = "bg-rose-50 border-2 border-rose-300 text-rose-800 font-bold";
+                } else {
+                  btnClass = "bg-natural-light/50 border-2 border-natural-border/50 text-natural-muted opacity-60 cursor-not-allowed";
+                }
+              }
+
+              return (
+                <button
+                  key={index}
+                  onClick={() => handleAnswerQuickGrammar(index)}
+                  disabled={quickAnswered}
+                  className={`px-4 py-3 rounded-xl text-xs font-semibold transition-all duration-200 text-right flex items-center justify-between ${btnClass}`}
+                  dir="rtl"
+                >
+                  <span>{option}</span>
+                  {quickAnswered && isCorrectOpt && (
+                    <CheckCircle2 className="h-4 w-4 text-emerald-600 mr-2 shrink-0" />
+                  )}
+                  {quickAnswered && isSelected && !isCorrectOpt && (
+                    <AlertCircle className="h-4 w-4 text-rose-600 mr-2 shrink-0" />
+                  )}
+                </button>
+              );
+            })}
+          </div>
+
+          {quickAnswered && (
+            <div className="mt-4 p-4 rounded-xl bg-indigo-50/40 border border-indigo-100 text-xs leading-relaxed text-indigo-900 font-medium animate-fadeIn">
+              {quickIsCorrect ? (
+                <div className="flex items-center space-x-1.5 space-x-reverse text-emerald-800 font-bold mb-1">
+                  <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+                  <span className="mr-1.5">أحسنت! إجابة صحيحة وزيادة رائعة في رصيد نقاطك! (+{quickGrammarQ.points} نقطة)</span>
+                </div>
+              ) : (
+                <div className="flex items-center space-x-1.5 space-x-reverse text-rose-800 font-bold mb-1">
+                  <AlertCircle className="h-4 w-4 text-rose-600" />
+                  <span className="mr-1.5">للأسف الإجابة غير صحيحة، حاول في تحديات الغد!</span>
+                </div>
+              )}
+              <div className="mt-2 text-natural-dark">
+                <strong>💡 التوضيح العلمي:</strong> {quickGrammarQ.explanation}
+              </div>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Main Stats Bento Grid */}

@@ -234,58 +234,92 @@ export default function App() {
       />
 
       {/* Main Tab Renderers */}
-      <main className="flex-1">
-        {activeTab === 'dashboard' && (
-          <Dashboard
-            completedLessons={completedLessons}
-            quizScores={quizScores}
-            recentScores={recentScores}
-            points={points}
-            onAwardPoints={handleAwardPoints}
-            onNavigateToTab={(tab) => {
-              if (tab === 'tutor') {
-                setIsTutorOpen(true);
-                return;
-              }
-              window.history.pushState({ tab }, '');
-              setActiveTab(tab);
-              if (tab !== 'quizzes') setActiveLessonIdForQuiz(undefined);
-            }}
-          />
-        )}
+      <main className="flex-1 overflow-x-hidden">
+        <AnimatePresence mode="wait">
+          {activeTab === 'dashboard' && (
+            <motion.div
+              key="dashboard"
+              initial={{ opacity: 0, y: 15 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -15 }}
+              transition={{ duration: 0.25 }}
+            >
+              <Dashboard
+                completedLessons={completedLessons}
+                quizScores={quizScores}
+                recentScores={recentScores}
+                points={points}
+                onAwardPoints={handleAwardPoints}
+                onNavigateToTab={(tab) => {
+                  if (tab === 'tutor') {
+                    setIsTutorOpen(true);
+                    return;
+                  }
+                  window.history.pushState({ tab }, '');
+                  setActiveTab(tab);
+                  if (tab !== 'quizzes') setActiveLessonIdForQuiz(undefined);
+                }}
+              />
+            </motion.div>
+          )}
 
-        {activeTab === 'curriculum' && (
-          <CurriculumBrowser
-            completedLessons={completedLessons}
-            favoriteLessons={favoriteLessons}
-            onMarkLessonCompleted={handleMarkLessonCompleted}
-            onNavigateToQuiz={handleNavigateToQuiz}
-            onToggleFavorite={handleToggleFavorite}
-          />
-        )}
+          {activeTab === 'curriculum' && (
+            <motion.div
+              key="curriculum"
+              initial={{ opacity: 0, y: 15 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -15 }}
+              transition={{ duration: 0.25 }}
+            >
+              <CurriculumBrowser
+                completedLessons={completedLessons}
+                favoriteLessons={favoriteLessons}
+                onMarkLessonCompleted={handleMarkLessonCompleted}
+                onNavigateToQuiz={handleNavigateToQuiz}
+                onToggleFavorite={handleToggleFavorite}
+              />
+            </motion.div>
+          )}
 
-        {activeTab === 'quizzes' && (
-          <QuizSection
-            initialActiveLessonId={activeLessonIdForQuiz}
-            onSaveQuizScore={handleSaveQuizScore}
-          />
-        )}
+          {activeTab === 'quizzes' && (
+            <motion.div
+              key="quizzes"
+              initial={{ opacity: 0, y: 15 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -15 }}
+              transition={{ duration: 0.25 }}
+            >
+              <QuizSection
+                initialActiveLessonId={activeLessonIdForQuiz}
+                onSaveQuizScore={handleSaveQuizScore}
+              />
+            </motion.div>
+          )}
 
-        {activeTab === 'worksheets' && (
-          <WorksheetGenerator
-            favoriteLessons={favoriteLessons}
-            completedLessons={completedLessons}
-            onToggleFavorite={handleToggleFavorite}
-            onNavigateToTab={(tab) => {
-              if (tab === 'tutor') {
-                setIsTutorOpen(true);
-                return;
-              }
-              window.history.pushState({ tab }, '');
-              setActiveTab(tab);
-            }}
-          />
-        )}
+          {activeTab === 'worksheets' && (
+            <motion.div
+              key="worksheets"
+              initial={{ opacity: 0, y: 15 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -15 }}
+              transition={{ duration: 0.25 }}
+            >
+              <WorksheetGenerator
+                favoriteLessons={favoriteLessons}
+                completedLessons={completedLessons}
+                onToggleFavorite={handleToggleFavorite}
+                onNavigateToTab={(tab) => {
+                  if (tab === 'tutor') {
+                    setIsTutorOpen(true);
+                    return;
+                  }
+                  window.history.pushState({ tab }, '');
+                  setActiveTab(tab);
+                }}
+              />
+            </motion.div>
+          )}
+        </AnimatePresence>
       </main>
 
       {/* Floating Action Button (FAB) for AI Tutor / Dictionary - Highly visible on the LEFT */}

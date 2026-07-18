@@ -25,6 +25,7 @@ export interface Lesson {
   vocabulary: Vocabulary[];
   quiz: QuizQuestion[];
   videoUrl?: string;
+  driveVideoUrl?: string;
 }
 
 export interface Unit {
@@ -1019,6 +1020,7 @@ export const curriculumData: Unit[] = [
         page: 93,
         author: 'المقنع الكندي',
         videoUrl: 'https://www.youtube.com/embed/cgWk0HZ6gYA',
+        driveVideoUrl: 'https://drive.google.com/file/d/1R27Hzlrhe-P-RW5oeCmpGHJeHr-9mIMe/view?usp=sharing',
         text: `يُعَاتِبُنِي فِي الدَّيْنِ قَوْمِي وَإِنَّمَا ** دُيُونِيَ فِي أَشْيَاءَ تُكْسِبُهُمْ حَمْدَا
 أَلَمْ يَرَ قَوْمِي كَيْفَ أُوسِرُ مَرَّةً ** وَأُعْسِرُ حَتَّى تَبْلُغَ العُسْرَةُ الجُهْدَا
 فَمَا زَادَنِي الإِقْتَارُ مِنْهُمْ تَقَرُّباً ** وَلَا زَادَنِي فَضْلُ الغِنَى مِنْهُمُ بُعْدَا

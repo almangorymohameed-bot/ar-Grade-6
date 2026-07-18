@@ -139,16 +139,41 @@ const getYoutubeEmbedUrl = (url?: string): string => {
   return videoId ? `https://www.youtube.com/embed/${videoId}?autoplay=1&mute=0&rel=0&modestbranding=1&controls=1&showinfo=0&iv_load_policy=3&fs=0` : url;
 };
 
+// Helper to convert Google Drive link to preview embed URL
+const getDriveEmbedUrl = (url?: string): string => {
+  if (!url) return '';
+  let embedUrl = url;
+  if (url.includes('drive.google.com')) {
+    const fileIdMatch = url.match(/\/d\/([a-zA-Z0-9_-]+)/);
+    if (fileIdMatch && fileIdMatch[1]) {
+      embedUrl = `https://drive.google.com/file/d/${fileIdMatch[1]}/preview`;
+    }
+  }
+  return embedUrl;
+};
+
 interface VideoPlayerProps {
-  videoUrl: string;
+  videoUrl?: string;
+  driveVideoUrl?: string;
+  videoSource: 'youtube' | 'drive';
+  onChangeVideoSource?: (source: 'youtube' | 'drive') => void;
   isNightMode: boolean;
   onMaximize: () => void;
   title: string;
   isMaximized?: boolean;
 }
 
-const VideoPlayer = ({ videoUrl, isNightMode, onMaximize, title, isMaximized = false }: VideoPlayerProps) => {
-  const embedUrl = getYoutubeEmbedUrl(videoUrl);
+const VideoPlayer = ({ 
+  videoUrl, 
+  driveVideoUrl, 
+  videoSource, 
+  onChangeVideoSource, 
+  isNightMode, 
+  onMaximize, 
+  title, 
+  isMaximized = false 
+}: VideoPlayerProps) => {
+  const embedUrl = videoSource === 'youtube' ? getYoutubeEmbedUrl(videoUrl) : getDriveEmbedUrl(driveVideoUrl);
 
   if (isMaximized) {
     return (
@@ -181,34 +206,70 @@ const VideoPlayer = ({ videoUrl, isNightMode, onMaximize, title, isMaximized = f
   }
 
   return (
-    <div id="video-lesson-container" className={`relative w-full rounded-2xl overflow-hidden shadow-md border ${isNightMode ? 'bg-zinc-950 border-zinc-800' : 'bg-black border-natural-border/60'} group`}>
-      <div className="relative aspect-video w-full h-0 pb-[56.25%]">
-        <iframe
-          src={embedUrl}
-          title={`مقطع مرئي للدرس: ${title}`}
-          frameBorder="0"
-          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-          sandbox="allow-scripts allow-same-origin"
-          className="absolute top-0 left-0 w-full h-full"
-        />
-      </div>
-      {/* Maximizer overlay bar inside the app */}
-      <div className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-30 flex space-x-2 space-x-reverse">
-        <button
-          id="btn-maximize-video"
-          onClick={onMaximize}
-          className="px-3 py-1.5 bg-black/80 hover:bg-amber-600 text-white rounded-lg text-xs font-bold transition-all flex items-center space-x-1.5 space-x-reverse shadow-md border border-white/10"
-          title="تكبير الفيديو داخل الموقع"
-        >
-          <Maximize2 className="h-4 w-4" />
-          <span>تكبير داخل الموقع</span>
-        </button>
-      </div>
-      
-      {/* Decorative tag */}
-      <div className="absolute bottom-3 right-3 bg-amber-600/90 text-white text-[10px] px-2.5 py-1 rounded-md font-bold flex items-center space-x-1.5 space-x-reverse z-15 backdrop-blur-sm shadow">
-        <Play className="h-3 w-3 fill-current" />
-        <span>فيديو تفاعلي للدرس (يشتغل تلقائياً)</span>
+    <div className="space-y-3">
+      {/* Dynamic Source Selector Bar if Drive option is available */}
+      {driveVideoUrl && videoUrl && (
+        <div className={`flex flex-col sm:flex-row items-center justify-between p-2 rounded-2xl border ${isNightMode ? 'bg-zinc-900 border-zinc-800' : 'bg-slate-50 border-slate-200/60'}`} dir="rtl">
+          <div className="flex items-center space-x-2 space-x-reverse">
+            <button
+              onClick={() => onChangeVideoSource?.('youtube')}
+              className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center space-x-1.5 space-x-reverse ${
+                videoSource === 'youtube'
+                  ? 'bg-amber-600 text-white shadow-sm'
+                  : `text-slate-600 dark:text-zinc-400 hover:text-slate-800 dark:hover:text-zinc-200`
+              }`}
+            >
+              <Play className="h-3.5 w-3.5" />
+              <span>تشغيل عبر يوتيوب (الأساسي)</span>
+            </button>
+            <button
+              onClick={() => onChangeVideoSource?.('drive')}
+              className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center space-x-1.5 space-x-reverse ${
+                videoSource === 'drive'
+                  ? 'bg-amber-600 text-white shadow-sm'
+                  : `text-slate-600 dark:text-zinc-400 hover:text-slate-800 dark:hover:text-zinc-200`
+              }`}
+            >
+              <BookOpen className="h-3.5 w-3.5" />
+              <span>تشغيل عبر قوقل درايف (إضافي)</span>
+            </button>
+          </div>
+          <span className={`text-[10px] font-bold mt-2 sm:mt-0 ml-2 ${isNightMode ? 'text-zinc-400' : 'text-slate-500'} hidden md:inline`}>
+            تتوفر خيارات تشغيل متعددة لهذا الدرس
+          </span>
+        </div>
+      )}
+
+      {/* Main Player Box */}
+      <div id="video-lesson-container" className={`relative w-full rounded-2xl overflow-hidden shadow-md border ${isNightMode ? 'bg-zinc-950 border-zinc-800' : 'bg-black border-natural-border/60'} group`}>
+        <div className="relative aspect-video w-full h-0 pb-[56.25%]">
+          <iframe
+            src={embedUrl}
+            title={`مقطع مرئي للدرس: ${title}`}
+            frameBorder="0"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+            sandbox="allow-scripts allow-same-origin"
+            className="absolute top-0 left-0 w-full h-full"
+          />
+        </div>
+        {/* Maximizer overlay bar inside the app */}
+        <div className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-30 flex space-x-2 space-x-reverse">
+          <button
+            id="btn-maximize-video"
+            onClick={onMaximize}
+            className="px-3 py-1.5 bg-black/80 hover:bg-amber-600 text-white rounded-lg text-xs font-bold transition-all flex items-center space-x-1.5 space-x-reverse shadow-md border border-white/10"
+            title="تكبير الفيديو داخل الموقع"
+          >
+            <Maximize2 className="h-4 w-4" />
+            <span>تكبير داخل الموقع</span>
+          </button>
+        </div>
+        
+        {/* Decorative tag */}
+        <div className="absolute bottom-3 right-3 bg-amber-600/90 text-white text-[10px] px-2.5 py-1 rounded-md font-bold flex items-center space-x-1.5 space-x-reverse z-15 backdrop-blur-sm shadow">
+          <Play className="h-3 w-3 fill-current" />
+          <span>فيديو تفاعلي للدرس (تشغيل {videoSource === 'youtube' ? 'يوتيوب' : 'قوقل درايف'})</span>
+        </div>
       </div>
     </div>
   );
@@ -332,6 +393,7 @@ export default function CurriculumBrowser({
   const [flipbookPage, setFlipbookPage] = useState<number>(0);
   const [isTraditionalFullscreen, setIsTraditionalFullscreen] = useState<boolean>(false);
   const [isMaximizedVideo, setIsMaximizedVideo] = useState<boolean>(false);
+  const [videoSource, setVideoSource] = useState<'youtube' | 'drive'>('youtube');
 
   // Reset page of flipbook when switching lesson or exiting flipbook
   React.useEffect(() => {
@@ -341,6 +403,7 @@ export default function CurriculumBrowser({
       window.speechSynthesis.cancel();
     }
     setIsPlaying(false);
+    setVideoSource('youtube');
   }, [selectedLesson, isFlipbookMode]);
 
   // Reset lessons dropdown when unit changes
@@ -491,9 +554,17 @@ export default function CurriculumBrowser({
 
   return (
     <div className="py-8 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto space-y-8 bg-natural-bg text-natural-text min-h-screen transition-all">
-      {!isReadingMode ? (
-        <>
-          {/* Title */}
+      <AnimatePresence mode="wait">
+        {!isReadingMode ? (
+          <motion.div
+            key="unit-explorer"
+            initial={{ opacity: 0, y: 15 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -15 }}
+            transition={{ duration: 0.3 }}
+            className="space-y-8 animate-none"
+          >
+            {/* Title */}
           <div className="flex flex-col md:flex-row md:items-center justify-between border-b border-natural-border pb-4">
         <div>
           <h2 className="text-xl sm:text-2xl font-bold text-natural-dark font-serif flex items-center">
@@ -671,9 +742,16 @@ export default function CurriculumBrowser({
           );
         })}
       </div>
-        </>
-      ) : (
-        <div className="w-full space-y-6 pt-4 animate-fade-in">
+          </motion.div>
+        ) : (
+          <motion.div
+            key="lesson-view"
+            initial={{ opacity: 0, y: 15 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -15 }}
+            transition={{ duration: 0.3 }}
+            className="w-full space-y-6 pt-4 animate-none"
+          >
           {/* Right Side: Core Reading Experience */}
         <div className="w-full space-y-6">
           {/* Lesson Header Toolbar */}
@@ -939,7 +1017,7 @@ export default function CurriculumBrowser({
                               />
                             </div>
 
-                            {selectedLesson.videoUrl && (
+                            {(selectedLesson.videoUrl || selectedLesson.driveVideoUrl) && (
                               <button
                                 id="btn-flipbook-watch-video"
                                 onClick={() => setIsMaximizedVideo(true)}
@@ -1144,13 +1222,24 @@ export default function CurriculumBrowser({
 
               {/* Core Content Box */}
               <div className={`border rounded-3xl p-6 sm:p-8 shadow-sm transition-all duration-300 ${isNightMode ? 'bg-zinc-900 border-zinc-800 text-zinc-100 shadow-zinc-950/20' : 'bg-white border-natural-border text-natural-dark'}`}>
+                <AnimatePresence mode="wait">
                 {/* Reading Text Tab */}
                 {activeSubTab === 'text' && (
-                  <div className="space-y-6">
+                  <motion.div
+                    key="subtab-text"
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                    transition={{ duration: 0.2 }}
+                    className="space-y-6"
+                  >
                     {/* Lesson Banner Image or Video Player */}
-                    {selectedLesson.videoUrl ? (
+                    {(selectedLesson.videoUrl || selectedLesson.driveVideoUrl) ? (
                       <VideoPlayer
                         videoUrl={selectedLesson.videoUrl}
+                        driveVideoUrl={selectedLesson.driveVideoUrl}
+                        videoSource={videoSource}
+                        onChangeVideoSource={setVideoSource}
                         isNightMode={isNightMode}
                         onMaximize={() => setIsMaximizedVideo(true)}
                         title={selectedLesson.title}
@@ -1239,12 +1328,19 @@ export default function CurriculumBrowser({
                         </p>
                       </div>
                     )}
-                  </div>
+                  </motion.div>
                 )}
 
                 {/* Vocabulary Tab */}
                 {activeSubTab === 'vocabulary' && (
-                  <div className="space-y-6">
+                  <motion.div
+                    key="subtab-vocabulary"
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                    transition={{ duration: 0.2 }}
+                    className="space-y-6"
+                  >
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       {selectedLesson.vocabulary.map((v, i) => (
                         <div key={i} className={`p-4 rounded-2xl flex flex-col justify-between border hover:bg-white transition-all ${isNightMode ? 'bg-zinc-800/40 border-zinc-700/80 hover:border-zinc-700 hover:bg-zinc-800/60 text-zinc-100' : 'bg-natural-light/50 border-natural-border/70 hover:border-natural-accent/30 hover:bg-white'}`}>
@@ -1270,12 +1366,19 @@ export default function CurriculumBrowser({
                         ألقِ نظرة على المعاني السابقة واحفظها جيداً لتجتاز اختبار الكلمات والربط بنجاح!
                       </p>
                     </div>
-                  </div>
+                  </motion.div>
                 )}
 
                 {/* Grammar Focus Tab */}
                 {activeSubTab === 'grammar' && selectedLesson.grammarFocus && (
-                  <div className="space-y-4">
+                  <motion.div
+                    key="subtab-grammar"
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                    transition={{ duration: 0.2 }}
+                    className="space-y-4"
+                  >
                     <div className={`border rounded-2xl p-5 border-r-4 shadow-sm ${isNightMode ? 'bg-zinc-800/30 border-zinc-700/50 border-r-natural-accent' : 'bg-white border-natural-border border-r-natural-accent'}`}>
                       <h4 className="font-bold text-xs text-natural-accent uppercase tracking-wider mb-2">القواعد النحوية والإملائية المستفادة:</h4>
                       <p className={`text-xs leading-relaxed font-sans font-bold whitespace-pre-line ${isNightMode ? 'text-zinc-300' : 'text-natural-dark'}`}>
@@ -1289,8 +1392,9 @@ export default function CurriculumBrowser({
                         يمكنك كتابة أي جملة من الجمل السابقة في تبويب <strong>"المعلم والبحث الذكي"</strong> ليقوم الذكاء الاصطناعي بإعرابها بالتفصيل وتوضيح أحكامها النحوية والصرفية!
                       </p>
                     </div>
-                  </div>
+                  </motion.div>
                 )}
+                </AnimatePresence>
               </div>
             </div>
           )}
@@ -1350,8 +1454,9 @@ export default function CurriculumBrowser({
             </div>
           </div>
         </div>
-      </div>
-    )}
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Traditional Fullscreen Overlay */}
       <AnimatePresence>
@@ -1556,7 +1661,7 @@ export default function CurriculumBrowser({
 
       {/* Maximized Video Overlay inside Web Window */}
       <AnimatePresence>
-        {isMaximizedVideo && selectedLesson.videoUrl && (
+        {isMaximizedVideo && (selectedLesson.videoUrl || selectedLesson.driveVideoUrl) && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -1568,26 +1673,54 @@ export default function CurriculumBrowser({
               <div className="flex items-center justify-between text-white border-b border-white/10 pb-3 flex-row-reverse">
                 <div className="text-right">
                   <span className="text-[10px] bg-amber-600 text-white px-2.5 py-0.5 rounded-full font-bold">
-                    عرض الفيديو التعليمي المكبر
+                    عرض الفيديو التعليمي المكبر {videoSource === 'youtube' ? '(يوتيوب)' : '(جوجل درايف)'}
                   </span>
                   <h4 className="font-serif font-bold text-lg mt-1">{selectedLesson.title}</h4>
                 </div>
                 
-                <button
-                  id="btn-close-maximized-video"
-                  onClick={() => setIsMaximizedVideo(false)}
-                  className="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold rounded-xl transition-all flex items-center space-x-1.5 space-x-reverse shadow-lg"
-                >
-                  <Minimize2 className="h-4 w-4" />
-                  <span>تصغير الفيديو</span>
-                </button>
+                <div className="flex items-center space-x-3 space-x-reverse flex-row-reverse">
+                  <button
+                    id="btn-close-maximized-video"
+                    onClick={() => setIsMaximizedVideo(false)}
+                    className="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold rounded-xl transition-all flex items-center space-x-1.5 space-x-reverse shadow-lg"
+                  >
+                    <Minimize2 className="h-4 w-4" />
+                    <span>تصغير الفيديو</span>
+                  </button>
+
+                  {/* Maximized Selector Option if drive is available */}
+                  {selectedLesson.driveVideoUrl && selectedLesson.videoUrl && (
+                    <div className="flex space-x-1.5 space-x-reverse bg-zinc-800/80 p-1 rounded-xl border border-white/10">
+                      <button
+                        onClick={() => setVideoSource('youtube')}
+                        className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                          videoSource === 'youtube'
+                            ? 'bg-amber-600 text-white'
+                            : 'text-zinc-400 hover:text-zinc-200'
+                        }`}
+                      >
+                        يوتيوب
+                      </button>
+                      <button
+                        onClick={() => setVideoSource('drive')}
+                        className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                          videoSource === 'drive'
+                            ? 'bg-amber-600 text-white'
+                            : 'text-zinc-400 hover:text-zinc-200'
+                        }`}
+                      >
+                        جوجل درايف
+                      </button>
+                    </div>
+                  )}
+                </div>
               </div>
 
               {/* Massive Video Body */}
               <div className="relative w-full aspect-video rounded-3xl overflow-hidden border border-white/10 bg-zinc-950 shadow-2xl">
                 <iframe
-                  src={getYoutubeEmbedUrl(selectedLesson.videoUrl)}
-                  title="YouTube Video Player Full"
+                  src={videoSource === 'youtube' ? getYoutubeEmbedUrl(selectedLesson.videoUrl) : getDriveEmbedUrl(selectedLesson.driveVideoUrl)}
+                  title="Video Player Full"
                   frameBorder="0"
                   allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
                   sandbox="allow-scripts allow-same-origin"
